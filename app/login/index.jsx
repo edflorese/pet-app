@@ -1,8 +1,44 @@
 import { View, Text, Image, Pressable } from "react-native";
-import React from "react";
+import React, { useCallback } from "react";
 import Colors from "@/constants/Colors";
+import * as WebBrowser from 'expo-web-browser'
+import { Link } from 'expo-router'
+import { useOAuth } from '@clerk/clerk-expo'
+import * as Linking from 'expo-linking'
+
+export const useWarmUpBrowser = () => {
+  React.useEffect(() => {
+    void WebBrowser.warmUpAsync()
+    return () => {
+      void WebBrowser.coolDownAsync()
+    }
+  }, [])
+}
+
+WebBrowser.maybeCompleteAuthSession()
 
 export default function LoginScreen() {
+  useWarmUpBrowser()
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
+  const onPress = useCallback(async () => {
+    try {
+      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/home', { scheme: 'myapp' }),
+      })
+
+      // If sign in was successful, set the active session
+      if (createdSessionId) {
+
+      } else {
+        // Use signIn or signUp returned from startOAuthFlow
+        // for next steps, such as MFA
+      }
+    } catch (err) {
+      // See https://clerk.com/docs/custom-flows/error-handling
+      // for more info on error handling
+      console.error(JSON.stringify(err, null, 2))
+    }
+  }, [])
   return (
     <View
       style={{
@@ -43,6 +79,7 @@ export default function LoginScreen() {
           Let's adopt the pet which you like and make there life happy again
         </Text>
         <Pressable
+        onPress={onPress}
           style={{
             padding: 14,
             marginTop: 100,
