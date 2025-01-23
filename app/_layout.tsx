@@ -26,7 +26,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="login/index"
             options={{
-              headerShown: false,
+              headerShown: true,
             }}
           />
         </Stack>

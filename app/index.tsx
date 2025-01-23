@@ -14,7 +14,7 @@ export default function Index() {
   };
   return (
     <View style={{ flex: 1 }}>
-      <Link href={"/login"}>
+      <Link href={"../login"}>
         <Text>Go to Login Screen</Text>
       </Link>
     </View>
