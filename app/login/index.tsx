@@ -90,7 +90,7 @@ export default function LoginScreen() {
         >
           <Text
             style={{
-              fontSize: "outfit-medium",
+              fontFamily: "outfit-medium",
               fontSize: 20,
               textAlign: "center",
             }}
