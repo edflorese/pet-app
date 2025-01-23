@@ -23,7 +23,7 @@ export default function LoginScreen() {
   const onPress = useCallback(async () => {
     try {
       const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
-        redirectUrl: Linking.createURL('/home', { scheme: 'myapp' }),
+        redirectUrl: Linking.createURL('/(tabs)/home', { scheme: 'myapp' }),
       })
 
       // If sign in was successful, set the active session
@@ -90,7 +90,7 @@ export default function LoginScreen() {
         >
           <Text
             style={{
-              fontSize: "outfit-medium",
+              fontFamily: "outfit-medium",
               fontSize: 20,
               textAlign: "center",
             }}
