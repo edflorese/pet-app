@@ -1,11 +1,72 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import Category from './Category'
+import { View, FlatList } from "react-native";
+import React, { useEffect, useState } from "react";
+import Category from "./Category";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/config/FirebaseConfig";
+import PetListItem from "./PetListItem";
+
+interface PetItem {
+  id: string;
+  category: string;
+  imageUrl: string;
+  name: string;
+  breed: string;
+  age: number;
+}
 
 export default function PetListByCategory() {
+  const [petList, setPetList] = useState<PetItem[]>([]);
+  const [loader, setLoader] = useState<boolean>(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Dogs");
+
+  useEffect(() => {
+    GetPetList(selectedCategory);
+  }, []);
+
+  const GetPetList = async (category: string) => {
+    try {
+      setLoader(true);
+      setPetList([]);
+      const q = query(
+        collection(db, "Pets"),
+        where("category", "==", category)
+      );
+      const querySnapshot = await getDocs(q);
+
+      const pets: PetItem[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as PetItem;
+        pets.push({ ...data, id: doc.id });
+      });
+
+      setPetList(pets);
+    } catch (error) {
+      console.error("Error fetching pet list:", error);
+    } finally {
+      setLoader(false);
+    }
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    GetPetList(category);
+  };
+
   return (
     <View>
-      <Category />
+      <Category
+        category={selectedCategory}
+        onCategoryChange={handleCategoryChange}
+      />
+      <FlatList
+        data={petList}
+        style={{ marginTop: 10 }}
+        horizontal={true}
+        keyExtractor={(item) => item.id}
+        refreshing={loader}
+        onRefresh={() => GetPetList(selectedCategory)}
+        renderItem={({ item }) => <PetListItem pet={item} />}
+      />
     </View>
-  )
+  );
 }
