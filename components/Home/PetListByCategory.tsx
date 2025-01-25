@@ -4,15 +4,7 @@ import Category from "./Category";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
 import PetListItem from "./PetListItem";
-
-interface PetItem {
-  id: string;
-  category: string;
-  imageUrl: string;
-  name: string;
-  breed: string;
-  age: number;
-}
+import { PetItem } from "@/models/Pets";
 
 export default function PetListByCategory() {
   const [petList, setPetList] = useState<PetItem[]>([]);
