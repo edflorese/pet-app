@@ -1,21 +1,31 @@
-import { View, Text, Image, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Touchable,
+  TouchableOpacity,
+} from "react-native";
 import React from "react";
 import Colors from "@/constants/Colors";
+import { useRouter } from "expo-router";
+import { PetListItemProps} from "@/models/Pets";
 
-interface PetItem {
-  imageUrl: string;
-  name: string;
-  breed: string;
-  age: number;
-}
 
-interface PetListItemProps {
-  pet: PetItem;
-}
 
 export default function PetListItem({ pet }: PetListItemProps) {
+  const router = useRouter();
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      onPress={() =>
+        router.push({
+          pathname: "../pet-details",
+          params: { pet: JSON.stringify(pet) } 
+        })
+      }
+      style={styles.container}
+    >
       <Image
         source={{ uri: pet.imageUrl }}
         style={styles.image}
@@ -26,7 +36,7 @@ export default function PetListItem({ pet }: PetListItemProps) {
         <Text style={styles.breed}>{pet.breed}</Text>
         <Text style={styles.age}>{pet.age} years</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
