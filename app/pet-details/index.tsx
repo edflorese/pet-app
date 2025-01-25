@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import PetInfo from "@/components/PetDetails/PetInfo";
 import { PetItem } from "@/models/Pets"; 
+import PetSubInfo from "@/components/PetDetails/PetSubInfo";
 
 export default function PetDetails() {
   const params = useLocalSearchParams();
@@ -18,7 +19,11 @@ export default function PetDetails() {
 
   return (
     <View>
+
       <PetInfo pet={pet} />
+
+      <PetSubInfo pet={pet} />
+
     </View>
   );
 }
