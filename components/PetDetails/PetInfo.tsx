@@ -4,7 +4,6 @@ import Colors from "@/constants/Colors";
 import { PetListItemProps } from "@/models/Pets";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-
 export default function PetInfo({ pet }: PetListItemProps) {
   if (!pet) {
     return <Text>No pet data available</Text>;
@@ -16,9 +15,9 @@ export default function PetInfo({ pet }: PetListItemProps) {
       <View
         style={{
           padding: 20,
-          display:'flex',
-          flexDirection:'row',
-          justifyContent:'space-between'
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
         }}
       >
         <View>
@@ -42,7 +41,6 @@ export default function PetInfo({ pet }: PetListItemProps) {
         </View>
         <Ionicons name="heart-outline" size={30} color="black" />
       </View>
-
     </View>
   );
 }

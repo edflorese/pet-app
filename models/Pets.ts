@@ -17,6 +17,7 @@ export interface PetItem {
   name: string;
   sex: string;
   weight: string;
+  user: User;
 }
 
 export interface PetListItemProps {
