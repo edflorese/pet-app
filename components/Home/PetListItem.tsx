@@ -1,17 +1,9 @@
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Touchable,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 import React from "react";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
-import { PetListItemProps} from "@/models/Pets";
-
-
+import { PetListItemProps } from "@/models/Pets";
+import MarkFav from "../MarkFav";
 
 export default function PetListItem({ pet }: PetListItemProps) {
   const router = useRouter();
@@ -21,7 +13,7 @@ export default function PetListItem({ pet }: PetListItemProps) {
       onPress={() =>
         router.push({
           pathname: "../pet-details",
-          params: { pet: JSON.stringify(pet) } 
+          params: { pet: JSON.stringify(pet) },
         })
       }
       style={styles.container}
@@ -31,6 +23,9 @@ export default function PetListItem({ pet }: PetListItemProps) {
         style={styles.image}
         resizeMode="cover"
       />
+      <View style={styles.fav}>
+        <MarkFav pet={pet} color = {'white'}/>
+      </View>
       <Text style={styles.name}>{pet.name}</Text>
       <View style={styles.detailContainer}>
         <Text style={styles.breed}>{pet.breed}</Text>
@@ -72,5 +67,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontSize: 11,
     backgroundColor: Colors.LIGHT_PRIMARY,
+  },
+  fav: {
+    position: "absolute",
+    zIndex: 10,
+    right: 10,
+    top: 10,
   },
 });
