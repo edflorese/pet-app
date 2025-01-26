@@ -2,7 +2,7 @@ import { View, Image, Text, StyleSheet } from "react-native";
 import React from "react";
 import Colors from "@/constants/Colors";
 import { PetListItemProps } from "@/models/Pets";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import MarkFav from "../MarkFav";
 
 export default function PetInfo({ pet }: PetListItemProps) {
   if (!pet) {
@@ -39,7 +39,7 @@ export default function PetInfo({ pet }: PetListItemProps) {
             {pet?.address}
           </Text>
         </View>
-        <Ionicons name="heart-outline" size={30} color="black" />
+        <MarkFav pet={pet} />
       </View>
     </View>
   );
