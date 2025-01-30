@@ -16,12 +16,14 @@ import { Picker } from "@react-native-picker/picker";
 import { PetFormData, Category } from "@/models/Pets";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
+import FormSkeleton from "@/components/FormSkeleton";
 
 export default function PetForm() {
   const navigation = useNavigation();
   const [categoryList, setCategoryList] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<PetFormData>({
     name: "",
@@ -43,6 +45,8 @@ export default function PetForm() {
 
   const getCategories = async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
       const snapshot = await getDocs(collection(db, "Category"));
       const categories: Category[] = [];
@@ -50,10 +54,18 @@ export default function PetForm() {
         const data = doc.data() as Category;
         categories.push({ ...data, id: doc.id });
       });
+
+      if (categories.length === 0) {
+        setError("No categories found. Please try again later.");
+        return;
+      }
+
       setCategoryList(categories);
     } catch (error) {
       console.error("Error fetching categories:", error);
-      Alert.alert("Error", "Failed to load categories. Please try again.");
+      setError(
+        "Failed to load categories. Please check your connection and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,10 +105,8 @@ export default function PetForm() {
 
     setIsSaving(true);
     try {
-      // Aquí iría la lógica para guardar en Firebase
       console.log("Form Data:", formData);
       Alert.alert("Success", "Pet information saved successfully!");
-      // Opcional: Limpiar el formulario o navegar a otra pantalla
     } catch (error) {
       console.error("Error saving pet:", error);
       Alert.alert("Error", "Failed to save pet information. Please try again.");
@@ -106,10 +116,16 @@ export default function PetForm() {
   };
 
   if (isLoading) {
+    return <FormSkeleton />;
+  }
+
+  if (error) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.PRIMARY} />
-        <Text style={styles.loadingText}>Loading categories...</Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={getCategories}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -287,5 +303,28 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontFamily: "outfit",
+    fontSize: 16,
+    color: Colors.PRIMARY,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 7,
+  },
+  retryButtonText: {
+    fontFamily: "outfit-medium",
+    color: Colors.WHITE,
   },
 });
