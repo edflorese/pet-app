@@ -1,4 +1,4 @@
-import { View, Text, Image, TextInput, StyleSheet } from "react-native";
+import { View, Text, Image, TextInput, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import React, { useEffect } from "react";
 import { useNavigation } from "expo-router";
 import Colors from "@/constants/Colors";
@@ -10,11 +10,11 @@ export default function index() {
       headerTitle: "Add New Pet",
     });
   }, []);
-  const handleInputChange=(filedName:string, filedValue:string)=>{
+  const handleInputChange = (filedName: string, filedValue: string) => {
     console.log(filedName, filedValue)
   }
   return (
-    <View
+    <ScrollView
       style={{
         padding: 20,
       }}
@@ -36,12 +36,35 @@ export default function index() {
           borderWidth: 1,
           borderColor: Colors.GRAY,
         }}
-      ></Image>
+      />
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Pet name *</Text>
-        <TextInput style={styles.input} onChangeText={(value)=>handleInputChange('name', value)}/>
+        <TextInput style={styles.input} onChangeText={(value) => handleInputChange('name', value)} />
       </View>
-    </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Breed *</Text>
+        <TextInput style={styles.input} onChangeText={(value) => handleInputChange('breed', value)} />
+      </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Age *</Text>
+        <TextInput style={styles.input} onChangeText={(value) => handleInputChange('age', value)} />
+      </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Weight *</Text>
+        <TextInput style={styles.input} onChangeText={(value) => handleInputChange('weight', value)} />
+      </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Address *</Text>
+        <TextInput style={styles.input} onChangeText={(value) => handleInputChange('address', value)} />
+      </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>About *</Text>
+        <TextInput style={styles.input} numberOfLines={5} multiline={true} onChangeText={(value) => handleInputChange('about', value)} />
+      </View>
+      <TouchableOpacity style={styles.button}>
+        <Text style={{ fontFamily: 'outfit-medium', textAlign: 'center' }}>Submit</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
@@ -58,4 +81,10 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     fontFamily: "outfit",
   },
+  button: {
+    padding: 15,
+    backgroundColor: Colors.PRIMARY,
+    borderRadius: 7,
+    marginVertical:10
+  }
 });
