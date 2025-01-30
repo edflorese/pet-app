@@ -12,10 +12,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
-import { PetFormData } from "@/models/Pets";
+import { PetFormData, Category } from "@/models/Pets";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/config/FirebaseConfig";
 
 export default function PetForm() {
   const navigation = useNavigation();
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [formData, setFormData] = useState<PetFormData>({
     name: "",
     breed: "",
@@ -24,13 +27,29 @@ export default function PetForm() {
     weight: "",
     address: "",
     about: "",
+    category: "", // Añadido campo category
   });
 
   useEffect(() => {
     navigation.setOptions({
       headerTitle: "Add New Pet",
     });
+    GetCategories();
   }, []);
+
+  const GetCategories = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "Category"));
+      const categories: Category[] = [];
+      snapshot.forEach((doc) => {
+        categories.push(doc.data() as Category);
+      });
+      setCategoryList(categories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      Alert.alert("Error", "Failed to load categories");
+    }
+  };
 
   const handleInputChange = (
     fieldName: keyof PetFormData,
@@ -43,7 +62,6 @@ export default function PetForm() {
   };
 
   const handleSubmit = () => {
-    // Validación básica
     const requiredFields: (keyof PetFormData)[] = [
       "name",
       "breed",
@@ -52,6 +70,7 @@ export default function PetForm() {
       "weight",
       "address",
       "about",
+      "category",
     ];
     const emptyFields = requiredFields.filter((field) => !formData[field]);
 
@@ -63,7 +82,6 @@ export default function PetForm() {
       return;
     }
 
-    // Aquí puedes agregar la lógica para enviar los datos
     console.log("Form Data:", formData);
   };
 
@@ -83,6 +101,26 @@ export default function PetForm() {
           value={formData.name}
           onChangeText={(value) => handleInputChange("name", value)}
         />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Category *</Text>
+        <Picker
+          selectedValue={formData.category}
+          style={styles.input}
+          onValueChange={(itemValue) =>
+            handleInputChange("category", itemValue)
+          }
+        >
+          <Picker.Item label="Select a category" value="" />
+          {categoryList.map((category, index) => (
+            <Picker.Item
+              key={index}
+              label={category.name}
+              value={category.name}
+            />
+          ))}
+        </Picker>
       </View>
 
       <View style={styles.inputContainer}>

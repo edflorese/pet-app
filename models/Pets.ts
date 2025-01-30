@@ -38,9 +38,13 @@ export interface PetFormData {
   weight: string;
   address: string;
   about: string;
-  image?: string;
+  category: string;
 }
 
 export interface PetFormProps {
   onSubmit: (data: PetFormData) => void;
+}
+
+export interface Category {
+  name: string;
 }
