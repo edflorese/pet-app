@@ -12,18 +12,18 @@ import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
-import { PetFormData } from "@/models/PetForm";
+import { PetFormData } from "@/models/Pets";
 
 export default function PetForm() {
   const navigation = useNavigation();
   const [formData, setFormData] = useState<PetFormData>({
-    name: '',
-    breed: '',
-    age: '',
-    sex: 'Male',
-    weight: '',
-    address: '',
-    about: '',
+    name: "",
+    breed: "",
+    age: "",
+    sex: "Male",
+    weight: "",
+    address: "",
+    about: "",
   });
 
   useEffect(() => {
@@ -32,31 +32,45 @@ export default function PetForm() {
     });
   }, []);
 
-  const handleInputChange = (fieldName: keyof PetFormData, fieldValue: string) => {
+  const handleInputChange = (
+    fieldName: keyof PetFormData,
+    fieldValue: string
+  ) => {
     setFormData((prev: PetFormData) => ({
       ...prev,
       [fieldName]: fieldValue,
     }));
-};
+  };
 
   const handleSubmit = () => {
     // Validación básica
-    const requiredFields: (keyof PetFormData)[] = ['name', 'breed', 'age', 'sex', 'weight', 'address', 'about'];
-    const emptyFields = requiredFields.filter(field => !formData[field]);
+    const requiredFields: (keyof PetFormData)[] = [
+      "name",
+      "breed",
+      "age",
+      "sex",
+      "weight",
+      "address",
+      "about",
+    ];
+    const emptyFields = requiredFields.filter((field) => !formData[field]);
 
     if (emptyFields.length > 0) {
-      Alert.alert('Error', `Please fill in all required fields: ${emptyFields.join(', ')}`);
+      Alert.alert(
+        "Error",
+        `Please fill in all required fields: ${emptyFields.join(", ")}`
+      );
       return;
     }
 
     // Aquí puedes agregar la lógica para enviar los datos
-    console.log('Form Data:', formData);
+    console.log("Form Data:", formData);
   };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
-      
+
       <Image
         source={require("./../../assets/images/huella.png")}
         style={styles.image}
@@ -95,7 +109,7 @@ export default function PetForm() {
         <Picker
           selectedValue={formData.sex}
           style={styles.input}
-          onValueChange={(itemValue) => handleInputChange('sex', itemValue)}
+          onValueChange={(itemValue) => handleInputChange("sex", itemValue)}
         >
           <Picker.Item label="Male" value="Male" />
           <Picker.Item label="Female" value="Female" />
@@ -167,7 +181,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   label: {
     marginVertical: 5,
