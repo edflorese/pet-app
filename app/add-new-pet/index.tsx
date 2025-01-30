@@ -7,56 +7,133 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
-import { PetFormData } from "@/models/PetForm";
+import { PetFormData, Category } from "@/models/Pets";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/config/FirebaseConfig";
+import FormSkeleton from "@/components/FormSkeleton";
 
 export default function PetForm() {
   const navigation = useNavigation();
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<PetFormData>({
-    name: '',
-    breed: '',
-    age: '',
-    sex: 'Male',
-    weight: '',
-    address: '',
-    about: '',
+    name: "",
+    breed: "",
+    age: "",
+    sex: "Male",
+    weight: "",
+    address: "",
+    about: "",
+    category: "",
   });
 
   useEffect(() => {
     navigation.setOptions({
       headerTitle: "Add New Pet",
     });
+    getCategories();
   }, []);
 
-  const handleInputChange = (fieldName: keyof PetFormData, fieldValue: string) => {
+  const getCategories = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const snapshot = await getDocs(collection(db, "Category"));
+      const categories: Category[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Category;
+        categories.push({ ...data, id: doc.id });
+      });
+
+      if (categories.length === 0) {
+        setError("No categories found. Please try again later.");
+        return;
+      }
+
+      setCategoryList(categories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setError(
+        "Failed to load categories. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (
+    fieldName: keyof PetFormData,
+    fieldValue: string
+  ) => {
     setFormData((prev: PetFormData) => ({
       ...prev,
       [fieldName]: fieldValue,
     }));
-};
+  };
 
-  const handleSubmit = () => {
-    // Validación básica
-    const requiredFields: (keyof PetFormData)[] = ['name', 'breed', 'age', 'sex', 'weight', 'address', 'about'];
-    const emptyFields = requiredFields.filter(field => !formData[field]);
+  const handleSubmit = async () => {
+    const requiredFields: (keyof PetFormData)[] = [
+      "name",
+      "breed",
+      "age",
+      "sex",
+      "weight",
+      "address",
+      "about",
+      "category",
+    ];
+
+    const emptyFields = requiredFields.filter((field) => !formData[field]);
 
     if (emptyFields.length > 0) {
-      Alert.alert('Error', `Please fill in all required fields: ${emptyFields.join(', ')}`);
+      Alert.alert(
+        "Error",
+        `Please fill in all required fields: ${emptyFields.join(", ")}`
+      );
       return;
     }
 
-    // Aquí puedes agregar la lógica para enviar los datos
-    console.log('Form Data:', formData);
+    setIsSaving(true);
+    try {
+      console.log("Form Data:", formData);
+      Alert.alert("Success", "Pet information saved successfully!");
+    } catch (error) {
+      console.error("Error saving pet:", error);
+      Alert.alert("Error", "Failed to save pet information. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <FormSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={getCategories}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
-      
+
       <Image
         source={require("./../../assets/images/huella.png")}
         style={styles.image}
@@ -69,6 +146,26 @@ export default function PetForm() {
           value={formData.name}
           onChangeText={(value) => handleInputChange("name", value)}
         />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Category *</Text>
+        <Picker
+          selectedValue={formData.category}
+          style={styles.input}
+          onValueChange={(itemValue) =>
+            handleInputChange("category", itemValue)
+          }
+        >
+          <Picker.Item label="Select a category" value="" />
+          {categoryList.map((category, index) => (
+            <Picker.Item
+              key={index}
+              label={category.name}
+              value={category.name}
+            />
+          ))}
+        </Picker>
       </View>
 
       <View style={styles.inputContainer}>
@@ -95,7 +192,7 @@ export default function PetForm() {
         <Picker
           selectedValue={formData.sex}
           style={styles.input}
-          onValueChange={(itemValue) => handleInputChange('sex', itemValue)}
+          onValueChange={(itemValue) => handleInputChange("sex", itemValue)}
         >
           <Picker.Item label="Male" value="Male" />
           <Picker.Item label="Female" value="Female" />
@@ -132,8 +229,16 @@ export default function PetForm() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit</Text>
+      <TouchableOpacity
+        style={[styles.button, isSaving && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator color={Colors.WHITE} />
+        ) : (
+          <Text style={styles.buttonText}>Submit</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -167,7 +272,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   label: {
     marginVertical: 5,
@@ -178,10 +283,48 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.PRIMARY,
     borderRadius: 7,
     marginVertical: 10,
+    marginBottom: 50,
   },
   buttonText: {
     fontFamily: "outfit-medium",
     textAlign: "center",
+    color: Colors.WHITE,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontFamily: "outfit",
+    color: Colors.PRIMARY,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontFamily: "outfit",
+    fontSize: 16,
+    color: Colors.PRIMARY,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 7,
+  },
+  retryButtonText: {
+    fontFamily: "outfit-medium",
     color: Colors.WHITE,
   },
 });
