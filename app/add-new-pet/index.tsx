@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
@@ -19,6 +20,9 @@ import { db } from "@/config/FirebaseConfig";
 export default function PetForm() {
   const navigation = useNavigation();
   const [categoryList, setCategoryList] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState<PetFormData>({
     name: "",
     breed: "",
@@ -27,27 +31,31 @@ export default function PetForm() {
     weight: "",
     address: "",
     about: "",
-    category: "", // Añadido campo category
+    category: "",
   });
 
   useEffect(() => {
     navigation.setOptions({
       headerTitle: "Add New Pet",
     });
-    GetCategories();
+    getCategories();
   }, []);
 
-  const GetCategories = async () => {
+  const getCategories = async () => {
+    setIsLoading(true);
     try {
       const snapshot = await getDocs(collection(db, "Category"));
       const categories: Category[] = [];
       snapshot.forEach((doc) => {
-        categories.push(doc.data() as Category);
+        const data = doc.data() as Category;
+        categories.push({ ...data, id: doc.id });
       });
       setCategoryList(categories);
     } catch (error) {
       console.error("Error fetching categories:", error);
-      Alert.alert("Error", "Failed to load categories");
+      Alert.alert("Error", "Failed to load categories. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,7 +69,7 @@ export default function PetForm() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const requiredFields: (keyof PetFormData)[] = [
       "name",
       "breed",
@@ -72,6 +80,7 @@ export default function PetForm() {
       "about",
       "category",
     ];
+
     const emptyFields = requiredFields.filter((field) => !formData[field]);
 
     if (emptyFields.length > 0) {
@@ -82,8 +91,28 @@ export default function PetForm() {
       return;
     }
 
-    console.log("Form Data:", formData);
+    setIsSaving(true);
+    try {
+      // Aquí iría la lógica para guardar en Firebase
+      console.log("Form Data:", formData);
+      Alert.alert("Success", "Pet information saved successfully!");
+      // Opcional: Limpiar el formulario o navegar a otra pantalla
+    } catch (error) {
+      console.error("Error saving pet:", error);
+      Alert.alert("Error", "Failed to save pet information. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.PRIMARY} />
+        <Text style={styles.loadingText}>Loading categories...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -184,8 +213,16 @@ export default function PetForm() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit</Text>
+      <TouchableOpacity
+        style={[styles.button, isSaving && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator color={Colors.WHITE} />
+        ) : (
+          <Text style={styles.buttonText}>Submit</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -230,10 +267,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.PRIMARY,
     borderRadius: 7,
     marginVertical: 10,
+    marginBottom: 50,
   },
   buttonText: {
     fontFamily: "outfit-medium",
     textAlign: "center",
     color: Colors.WHITE,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontFamily: "outfit",
+    color: Colors.PRIMARY,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
