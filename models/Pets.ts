@@ -29,3 +29,18 @@ export interface PetSubInfoCardProps {
   title: string;
   value: string;
 }
+
+export interface PetFormData {
+  name: string;
+  breed: string;
+  age: string;
+  sex: 'Male' | 'Female';
+  weight: string;
+  address: string;
+  about: string;
+  image?: string;
+}
+
+export interface PetFormProps {
+  onSubmit: (data: PetFormData) => void;
+}
