@@ -8,17 +8,23 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
 import { PetFormData, Category } from "@/models/Pets";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/config/FirebaseConfig";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/config/FirebaseConfig";
 import FormSkeleton from "@/components/FormSkeleton";
+import * as ImagePicker from "expo-image-picker";
+import { v4 as uuidv4 } from "uuid";
+import * as Crypto from "expo-crypto";
 
 export default function PetForm() {
+  const [image, setImage] = useState<string | undefined>(undefined);
   const navigation = useNavigation();
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +41,18 @@ export default function PetForm() {
     about: "",
     category: "",
   });
+
+  const generateUUID = async () => {
+    const randomBytes = await Crypto.getRandomBytesAsync(16);
+    return [...randomBytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
+
+  const handleInputChange = (fieldName: keyof PetFormData, fieldValue: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: fieldValue,
+    }));
+  };
 
   useEffect(() => {
     navigation.setOptions({
@@ -71,14 +89,30 @@ export default function PetForm() {
     }
   };
 
-  const handleInputChange = (
-    fieldName: keyof PetFormData,
-    fieldValue: string
-  ) => {
-    setFormData((prev: PetFormData) => ({
-      ...prev,
-      [fieldName]: fieldValue,
-    }));
+  const imagePicker = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const imageRef = ref(storage, `/PetAdopt/${await generateUUID()}`);
+      await uploadBytes(imageRef, blob);
+      return await getDownloadURL(imageRef);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
@@ -105,8 +139,19 @@ export default function PetForm() {
 
     setIsSaving(true);
     try {
-      console.log("Form Data:", formData);
+      let imageUrl = "";
+      if (image) {
+        imageUrl = await uploadImage(image);
+      }
+
+      await addDoc(collection(db, "Pets"), {
+        ...formData,
+        imageUrl,
+        createdAt: new Date(),
+      });
+
       Alert.alert("Success", "Pet information saved successfully!");
+      navigation.goBack();
     } catch (error) {
       console.error("Error saving pet:", error);
       Alert.alert("Error", "Failed to save pet information. Please try again.");
@@ -115,29 +160,17 @@ export default function PetForm() {
     }
   };
 
-  if (isLoading) {
-    return <FormSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={getCategories}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
 
-      <Image
-        source={require("./../../assets/images/huella.png")}
-        style={styles.image}
-      />
+      <Pressable onPress={imagePicker}>
+        {!image? <Image
+          source={require("./../../assets/images/huella.png")}
+          style={styles.image}
+        />:
+        <Image source={{uri:image}} style={styles.image}/>}
+      </Pressable>
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Pet name *</Text>
