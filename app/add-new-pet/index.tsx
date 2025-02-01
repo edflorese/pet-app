@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
@@ -17,8 +18,10 @@ import { PetFormData, Category } from "@/models/Pets";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
 import FormSkeleton from "@/components/FormSkeleton";
+import * as ImagePicker from "expo-image-picker";
 
 export default function PetForm() {
+  const [image, setImage] = useState<string | undefined>(undefined);
   const navigation = useNavigation();
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,6 +71,21 @@ export default function PetForm() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const imagePicker = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    console.log(result);
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
     }
   };
 
@@ -134,10 +152,13 @@ export default function PetForm() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
 
-      <Image
-        source={require("./../../assets/images/huella.png")}
-        style={styles.image}
-      />
+      <Pressable onPress={imagePicker}>
+        {!image? <Image
+          source={require("./../../assets/images/huella.png")}
+          style={styles.image}
+        />:
+        <Image source={{uri:image}} style={styles.image}/>}
+      </Pressable>
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Pet name *</Text>
