@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "expo-router";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
 import { PetFormData, Category } from "@/models/Pets";
@@ -20,12 +21,13 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/config/FirebaseConfig";
 import FormSkeleton from "@/components/FormSkeleton";
 import * as ImagePicker from "expo-image-picker";
-import { v4 as uuidv4 } from "uuid";
 import * as Crypto from "expo-crypto";
 
 export default function PetForm() {
   const [image, setImage] = useState<string | undefined>(undefined);
   const navigation = useNavigation();
+  const { userId } = useAuth();
+  const { user } = useUser();
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -44,10 +46,15 @@ export default function PetForm() {
 
   const generateUUID = async () => {
     const randomBytes = await Crypto.getRandomBytesAsync(16);
-    return [...randomBytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return [...randomBytes]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
   };
 
-  const handleInputChange = (fieldName: keyof PetFormData, fieldValue: string) => {
+  const handleInputChange = (
+    fieldName: keyof PetFormData,
+    fieldValue: string
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [fieldName]: fieldValue,
@@ -91,7 +98,7 @@ export default function PetForm() {
 
   const imagePicker = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -116,6 +123,11 @@ export default function PetForm() {
   };
 
   const handleSubmit = async () => {
+    if (!userId || !user) {
+      Alert.alert("Error", "You must be logged in to add a pet");
+      return;
+    }
+
     const requiredFields: (keyof PetFormData)[] = [
       "name",
       "breed",
@@ -137,17 +149,31 @@ export default function PetForm() {
       return;
     }
 
+    if (!image) {
+      Alert.alert("Error", "Please select an image for your pet");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      let imageUrl = "";
-      if (image) {
-        imageUrl = await uploadImage(image);
-      }
+      const imageUrl = await uploadImage(image);
 
+      // Guarda solo los campos especificados
       await addDoc(collection(db, "Pets"), {
-        ...formData,
+        about: formData.about,
+        address: formData.address,
+        age: formData.age,
+        breed: formData.breed,
+        category: formData.category,
         imageUrl,
-        createdAt: new Date(),
+        name: formData.name,
+        sex: formData.sex,
+        weight: formData.weight,
+        user: {
+          email: user.primaryEmailAddress?.emailAddress || "",
+          imageUrl: user.imageUrl,
+          name: `${user.firstName} ${user.lastName}`.trim(),
+        },
       });
 
       Alert.alert("Success", "Pet information saved successfully!");
@@ -160,16 +186,34 @@ export default function PetForm() {
     }
   };
 
+  if (isLoading) {
+    return <FormSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={getCategories}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
 
       <Pressable onPress={imagePicker}>
-        {!image? <Image
-          source={require("./../../assets/images/huella.png")}
-          style={styles.image}
-        />:
-        <Image source={{uri:image}} style={styles.image}/>}
+        {!image ? (
+          <Image
+            source={require("./../../assets/images/huella.png")}
+            style={styles.image}
+          />
+        ) : (
+          <Image source={{ uri: image }} style={styles.image} />
+        )}
       </Pressable>
 
       <View style={styles.inputContainer}>
@@ -178,6 +222,7 @@ export default function PetForm() {
           style={styles.input}
           value={formData.name}
           onChangeText={(value) => handleInputChange("name", value)}
+          placeholder="Enter pet name"
         />
       </View>
 
@@ -207,6 +252,7 @@ export default function PetForm() {
           style={styles.input}
           value={formData.breed}
           onChangeText={(value) => handleInputChange("breed", value)}
+          placeholder="Enter breed"
         />
       </View>
 
@@ -217,6 +263,7 @@ export default function PetForm() {
           value={formData.age}
           onChangeText={(value) => handleInputChange("age", value)}
           keyboardType="numeric"
+          placeholder="Enter age"
         />
       </View>
 
@@ -239,6 +286,7 @@ export default function PetForm() {
           value={formData.weight}
           onChangeText={(value) => handleInputChange("weight", value)}
           keyboardType="numeric"
+          placeholder="Enter weight"
         />
       </View>
 
@@ -248,6 +296,7 @@ export default function PetForm() {
           style={styles.input}
           value={formData.address}
           onChangeText={(value) => handleInputChange("address", value)}
+          placeholder="Enter address"
         />
       </View>
 
@@ -259,6 +308,7 @@ export default function PetForm() {
           numberOfLines={5}
           multiline={true}
           onChangeText={(value) => handleInputChange("about", value)}
+          placeholder="Tell us about your pet"
         />
       </View>
 
