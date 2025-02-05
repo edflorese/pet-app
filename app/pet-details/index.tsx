@@ -5,14 +5,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation, router } from "expo-router";
-import PetInfo from "@/components/PetDetails/PetInfo";
-import { PetItem } from "@/models/Pets";
-import PetSubInfo from "@/components/PetDetails/PetSubInfo";
-import AboutPet from "@/components/PetDetails/AboutPet";
-import OwnerInfo from "@/components/PetDetails/OwnerInfo";
-import Colors from "@/constants/Colors";
 import { useUser } from "@clerk/clerk-expo";
 import {
   collection,
@@ -21,14 +15,25 @@ import {
   query,
   setDoc,
   where,
+  QuerySnapshot,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
+import PetInfo from "@/components/PetDetails/PetInfo";
+import PetSubInfo from "@/components/PetDetails/PetSubInfo";
+import AboutPet from "@/components/PetDetails/AboutPet";
+import OwnerInfo from "@/components/PetDetails/OwnerInfo";
+import Colors from "@/constants/Colors";
+import { PetItem } from "@/models/Pets";
+import { ChatDocument, ChatUser } from "@/models/Chats";
+
 
 export default function PetDetails() {
   const params = useLocalSearchParams();
   const pet: PetItem = JSON.parse(params.pet as string);
   const navigation = useNavigation();
   const { user } = useUser();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -37,80 +42,97 @@ export default function PetDetails() {
     });
   }, []);
 
-  /*
-  Used to initiate the chat between two users
-  */ const InitiateChat = async () => {
-    if (!user || !pet?.user?.email) {
-      console.error("User or Pet owner is missing");
-      return;
-    }
-
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    const petOwnerEmail = pet?.user?.email;
-
-    if (!userEmail || !petOwnerEmail) {
-      console.error("Email information is missing.");
-      return;
-    }
-
-    const docId1 = `${userEmail}_${petOwnerEmail}`;
-    const docId2 = `${petOwnerEmail}_${userEmail}`;
-
+  const createChatDocument = async (docId: string, userData: ChatUser, petOwnerData: ChatUser): Promise<void> => {
     try {
-      const q = query(
+      const chatDoc: ChatDocument = {
+        id: docId,
+        users: [userData, petOwnerData],
+        userIds: [userData.email, petOwnerData.email],
+      };
+      await setDoc(doc(db, "Chat", docId), chatDoc);
+    } catch (error) {
+      console.error("Error creating chat document:", error);
+      throw error;
+    }
+  };
+
+  const handleExistingChat = (querySnapshot: QuerySnapshot<DocumentData>): void => {
+    querySnapshot.forEach((doc) => {
+      router.push({
+        pathname: "../chat",
+        params: { id: doc.id },
+      });
+    });
+  };
+
+  const InitiateChat = async (): Promise<void> => {
+    if (!user?.primaryEmailAddress?.emailAddress || !pet?.user?.email) {
+      console.error("Missing required user information");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const userEmail = user.primaryEmailAddress.emailAddress;
+      const petOwnerEmail = pet.user.email;
+      const docId1 = `${userEmail}_${petOwnerEmail}`;
+      const docId2 = `${petOwnerEmail}_${userEmail}`;
+
+      const chatQuery = query(
         collection(db, "Chat"),
         where("id", "in", [docId1, docId2])
       );
-      const querySnapshot = await getDocs(q);
+      
+      const querySnapshot = await getDocs(chatQuery);
 
       if (!querySnapshot.empty) {
-        querySnapshot.forEach((doc) => {
-          // console.log(doc.data());
-          router.push({
-            pathname: "../chat",
-            params: { id: doc.id },
-          });
-        });
+        handleExistingChat(querySnapshot);
         return;
       }
 
-      await setDoc(doc(db, "Chat", docId1), {
-        id: docId1,
-        users: [
-          {
-            email: userEmail,
-            imageUrl: user?.imageUrl,
-            name: user?.fullName,
-          },
-          {
-            email: petOwnerEmail,
-            imageUrl: pet?.user?.imageUrl,
-            name: pet?.user?.name,
-          },
-        ],
-      });
+      const userData: ChatUser = {
+        email: userEmail,
+        imageUrl: user.imageUrl || "",
+        name: user.fullName || "",
+      };
+
+      const petOwnerData: ChatUser = {
+        email: petOwnerEmail,
+        imageUrl: pet.user.imageUrl,
+        name: pet.user.name,
+      };
+
+      await createChatDocument(docId1, userData, petOwnerData);
 
       router.push({
         pathname: "../chat",
         params: { id: docId1 },
       });
     } catch (error) {
-      console.error("Error initiating chat:", error);
+      console.error("Error in InitiateChat:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <View>
+    <View style={styles.container}>
       <ScrollView>
         <PetInfo pet={pet} />
         <PetSubInfo pet={pet} />
         <AboutPet pet={pet} />
         <OwnerInfo pet={pet} />
-        <View style={{ height: 70 }}></View>
+        <View style={{ height: 70 }} />
       </ScrollView>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={InitiateChat} style={styles.adoptBtn}>
-          <Text style={styles.adoptText}>Adopt Me</Text>
+        <TouchableOpacity 
+          onPress={InitiateChat} 
+          style={[styles.adoptBtn, isLoading && styles.adoptBtnDisabled]}
+          disabled={isLoading}
+        >
+          <Text style={styles.adoptText}>
+            {isLoading ? "Processing..." : "Adopt Me"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -118,9 +140,15 @@ export default function PetDetails() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   adoptBtn: {
     padding: 15,
     backgroundColor: Colors.PRIMARY,
+  },
+  adoptBtnDisabled: {
+    opacity: 0.7,
   },
   buttonContainer: {
     position: "absolute",
