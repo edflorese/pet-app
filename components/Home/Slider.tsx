@@ -1,7 +1,6 @@
 import { View, FlatList, Image, StyleSheet, Dimensions } from "react-native";
 import React, { useEffect, useState } from "react";
-import { collection, doc, getDocs } from "firebase/firestore";
-import { db } from "@/config/FirebaseConfig";
+
 interface SliderItem {
   imageurl: string;
 }
@@ -16,13 +15,12 @@ export default function Slider() {
   const GetSliders = async () => {
     setSliderList([]);
     try {
-      const snapshot = await getDocs(collection(db, "Sliders"));
-      const items: SliderItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as SliderItem;
-        items.push(data);
-      });
-      setSliderList(items);
+      const response = await fetch("http://192.168.1.171:3000/api/sliders");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: SliderItem[] = await response.json();
+      setSliderList(data);
     } catch (error) {
       console.error("Error fetching sliders:", error);
     }
