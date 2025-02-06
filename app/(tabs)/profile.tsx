@@ -27,6 +27,12 @@ export default function Profile() {
       path: "/(tabs)/favorite",
     },
     {
+      id: 3,
+      name: "My Post",
+      icon: "bookmark",
+      path: "/../user-post",
+    },
+    {
       id: 4,
       name: "Inbox",
       icon: "chatbubble",
