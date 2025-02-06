@@ -157,8 +157,6 @@ export default function PetForm() {
     setIsSaving(true);
     try {
       const imageUrl = await uploadImage(image);
-
-      // Guarda solo los campos especificados
       await addDoc(collection(db, "Pets"), {
         about: formData.about,
         address: formData.address,
