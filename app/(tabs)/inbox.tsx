@@ -1,84 +1,57 @@
-import { View, Text, FlatList, StyleSheet } from "react-native";
-import React, { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/config/FirebaseConfig";
-import { useUser } from "@clerk/clerk-expo";
+import { View, Text, FlatList, StyleSheet, TextInput } from "react-native";
+import React, { useCallback } from "react";
 import UserItem from "@/components/Inbox/UserItem";
-import { ChatDocument, UserItemInfo } from "@/models/Chats";
+import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { useInbox } from "@/hooks/useInbox";
 
 export default function Inbox() {
-  const { user } = useUser();
-  const [userList, setUserList] = useState<ChatDocument[]>([]);
-  const [loader, setLoader] = useState<boolean>(false);
+  const {
+    loader,
+    searchQuery,
+    filteredList,
+    isEmpty,
+    hasSearchQuery,
+    GetUserList,
+    handleSearch,
+  } = useInbox();
 
-  useEffect(() => {
-    if (user) {
-      void GetUserList();
-    }
-  }, [user]);
+  const renderEmptyComponent = useCallback(() => {
+    if (!hasSearchQuery) return null;
 
-  const GetUserList = async (): Promise<void> => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
-
-    setLoader(true);
-    try {
-      const chatQuery = query(
-        collection(db, "Chat"),
-        where(
-          "userIds",
-          "array-contains",
-          user.primaryEmailAddress.emailAddress
-        )
-      );
-
-      const querySnapshot = await getDocs(chatQuery);
-      const newUserList: ChatDocument[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as ChatDocument;
-        newUserList.push({
-          ...data,
-          id: doc.id,
-        });
-      });
-
-      setUserList(newUserList);
-    } catch (error) {
-      console.error("Error fetching user list:", error);
-    } finally {
-      setLoader(false);
-    }
-  };
-
-  const MapOtherUserList = (): UserItemInfo[] => {
-    if (!user?.primaryEmailAddress?.emailAddress) return [];
-
-    return userList.reduce<UserItemInfo[]>((list, record) => {
-      const otherUser = record.users?.find(
-        (u) => u.email !== user.primaryEmailAddress?.emailAddress
-      );
-
-      if (otherUser) {
-        list.push({
-          docId: record.id,
-          ...otherUser,
-        });
-      }
-
-      return list;
-    }, []);
-  };
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="search-outline" size={50} color={Colors.GRAY} />
+        <Text style={styles.emptyText}>
+          No se encontraron usuarios que coincidan con "{searchQuery}"
+        </Text>
+      </View>
+    );
+  }, [hasSearchQuery, searchQuery]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Inbox</Text>
+
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color={Colors.GRAY} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search users..."
+          value={searchQuery} // Texto visible en UI en tiempo real
+          onChangeText={handleSearch} // Debounce aplicado solo en búsqueda
+          placeholderTextColor={Colors.GRAY}
+        />
+      </View>
+
       <FlatList
         style={styles.list}
-        data={MapOtherUserList()}
+        data={filteredList}
         refreshing={loader}
         onRefresh={GetUserList}
         keyExtractor={(item) => item.docId}
         renderItem={({ item }) => <UserItem userInfo={item} />}
+        ListEmptyComponent={renderEmptyComponent}
       />
     </View>
   );
@@ -95,5 +68,38 @@ const styles = StyleSheet.create({
   },
   list: {
     marginTop: 20,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.WHITE,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 15,
+    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: Colors.GRAY + "20",
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontFamily: "outfit",
+    fontSize: 16,
+    color: Colors.GRAY,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontFamily: "outfit",
+    fontSize: 16,
+    color: Colors.GRAY,
+    textAlign: "center",
+    marginTop: 10,
   },
 });
