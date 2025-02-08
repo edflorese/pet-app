@@ -14,45 +14,26 @@ interface MenuItem {
 
 export default function Profile() {
   const Menu: MenuItem[] = [
-    {
-      id: 1,
-      name: "Add New Pet",
-      icon: "add-circle",
-      path: "/add-new-pet",
-    },
-    {
-      id: 2,
-      name: "Favorites",
-      icon: "heart",
-      path: "/(tabs)/favorite",
-    },
-    {
-      id: 3,
-      name: "My Post",
-      icon: "bookmark",
-      path: "/../user-post",
-    },
-    {
-      id: 4,
-      name: "Inbox",
-      icon: "chatbubble",
-      path: "/(tabs)/inbox",
-    },
-    {
-      id: 5,
-      name: "Logout",
-      icon: "exit",
-      path: "login",
-    },
+    { id: 1, name: "Add New Pet", icon: "add-circle", path: "/add-new-pet" },
+    { id: 2, name: "Favorites", icon: "heart", path: "/(tabs)/favorite" },
+    { id: 3, name: "My Post", icon: "bookmark", path: "/user-post" },
+    { id: 4, name: "Inbox", icon: "chatbubble", path: "/(tabs)/inbox" },
+    { id: 5, name: "Logout", icon: "exit", path: "/login" },
   ];
 
   const { user } = useUser();
   const router = useRouter();
   const { signOut } = useAuth();
 
-  const onPressMenu = (item: MenuItem) => {
-    if (item.name.toLowerCase() === 'logout') {
-      signOut();
+  const onPressMenu = async (item: MenuItem) => {
+    if (item.name.toLowerCase() === "logout") {
+      try {
+        await signOut();
+
+        router.push(item.path as any);
+      } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+      }
       return;
     }
     router.push(item.path as any);
@@ -61,15 +42,12 @@ export default function Profile() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profile</Text>
-      
+
       <View style={styles.profileContainer}>
-        <Image
-          source={{ uri: user?.imageUrl }}
-          style={styles.profileImage}
-        />
+        <Image source={{ uri: user?.imageUrl }} style={styles.profileImage} />
         <Text style={styles.userName}>{user?.fullName}</Text>
         <Text style={styles.userEmail}>
-          {user?.primaryEmailAddress?.emailAddress}
+          {user?.primaryEmailAddress?.emailAddress || "No email available"}
         </Text>
       </View>
 
