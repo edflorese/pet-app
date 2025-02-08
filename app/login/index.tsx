@@ -1,44 +1,83 @@
 import { View, Text, Image, Pressable } from "react-native";
 import React, { useCallback } from "react";
 import Colors from "@/constants/Colors";
-import * as WebBrowser from 'expo-web-browser'
-import { Link } from 'expo-router'
-import { useOAuth } from '@clerk/clerk-expo'
-import * as Linking from 'expo-linking'
+import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
+import { useOAuth, useAuth } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
 
 export const useWarmUpBrowser = () => {
   React.useEffect(() => {
-    void WebBrowser.warmUpAsync()
+    void WebBrowser.warmUpAsync();
     return () => {
-      void WebBrowser.coolDownAsync()
-    }
-  }, [])
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+};
+
+WebBrowser.maybeCompleteAuthSession();
+
+// Define an interface for Clerk errors
+interface ClerkError {
+  status: number;
+  message?: string;
+  clerkError: boolean;
+  errors?: Array<{
+    code: string;
+    message: string;
+    longMessage?: string;
+  }>;
 }
 
-WebBrowser.maybeCompleteAuthSession()
-
 export default function LoginScreen() {
-  useWarmUpBrowser()
-  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
+  useWarmUpBrowser();
+  const router = useRouter();
+  const { signOut } = useAuth();
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
   const onPress = useCallback(async () => {
     try {
-      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
-        redirectUrl: Linking.createURL('/(tabs)/home', { scheme: 'myapp' }),
-      })
+      //ensure we're signed out to prevent session conflicts
+      await signOut();
 
-      // If sign in was successful, set the active session
-      if (createdSessionId) {
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL("/(tabs)/home", { scheme: "myapp" }),
+      });
 
-      } else {
-        // Use signIn or signUp returned from startOAuthFlow
-        // for next steps, such as MFA
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.push("/(tabs)/home");
       }
     } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      const error = err as ClerkError;
+      console.error("Login error:", error);
+
+      // Check if it's a session exists error
+      const sessionExistsError = error.errors?.some(
+        (e) =>
+          e.code === "session_exists" || e.message?.includes("session_exists")
+      );
+
+      if (sessionExistsError) {
+        try {
+          await signOut();
+          // Retry login after signing out
+          const { createdSessionId, setActive } = await startOAuthFlow({
+            redirectUrl: Linking.createURL("/(tabs)/home", { scheme: "myapp" }),
+          });
+
+          if (createdSessionId && setActive) {
+            await setActive({ session: createdSessionId });
+            router.push("/(tabs)/home");
+          }
+        } catch (retryErr) {
+          const retryError = retryErr as ClerkError;
+          console.error("Retry login error:", retryError);
+        }
+      }
     }
-  }, [])
+  }, [startOAuthFlow, router]);
+
   return (
     <View
       style={{
@@ -76,10 +115,10 @@ export default function LoginScreen() {
             color: Colors.GRAY,
           }}
         >
-          Let's adopt the pet which you like and make there life happy again
+          Let's adopt the pet which you like and make their life happy again
         </Text>
         <Pressable
-        onPress={onPress}
+          onPress={onPress}
           style={{
             padding: 14,
             marginTop: 100,
@@ -93,6 +132,7 @@ export default function LoginScreen() {
               fontFamily: "outfit-medium",
               fontSize: 20,
               textAlign: "center",
+              color: Colors.WHITE,
             }}
           >
             Get started!
