@@ -32,7 +32,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="inbox" 
       options={{
-        title: "Inbox",
+        title: "Chats",
         headerShown: false,
         tabBarIcon: ({ color }) => (
           <Ionicons name="chatbubble" size={24} color={color} />

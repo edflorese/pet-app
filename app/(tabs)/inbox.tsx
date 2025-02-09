@@ -12,12 +12,25 @@ export default function Inbox() {
     filteredList,
     isEmpty,
     hasSearchQuery,
-    GetUserList,
     handleSearch,
   } = useInbox();
 
   const renderEmptyComponent = useCallback(() => {
-    if (!hasSearchQuery) return null;
+    if (loader) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Cargando conversaciones...</Text>
+        </View>
+      );
+    }
+
+    if (!hasSearchQuery) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No hay conversaciones aún</Text>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.emptyContainer}>
@@ -27,19 +40,19 @@ export default function Inbox() {
         </Text>
       </View>
     );
-  }, [hasSearchQuery, searchQuery]);
+  }, [hasSearchQuery, searchQuery, loader]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Inbox</Text>
+      <Text style={styles.title}>Chats</Text>
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={Colors.GRAY} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search users..."
-          value={searchQuery} // Texto visible en UI en tiempo real
-          onChangeText={handleSearch} // Debounce aplicado solo en búsqueda
+          placeholder="Buscar usuarios..."
+          value={searchQuery}
+          onChangeText={handleSearch}
           placeholderTextColor={Colors.GRAY}
         />
       </View>
@@ -47,11 +60,10 @@ export default function Inbox() {
       <FlatList
         style={styles.list}
         data={filteredList}
-        refreshing={loader}
-        onRefresh={GetUserList}
         keyExtractor={(item) => item.docId}
         renderItem={({ item }) => <UserItem userInfo={item} />}
         ListEmptyComponent={renderEmptyComponent}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -59,12 +71,14 @@ export default function Inbox() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 20,
-    marginTop: 20,
+    backgroundColor: "#fff",
   },
   title: {
     fontFamily: "outfit-medium",
     fontSize: 30,
+    marginBottom: 15,
   },
   list: {
     marginTop: 20,
@@ -80,6 +94,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     borderWidth: 1,
     borderColor: Colors.GRAY + "20",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -94,6 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 50,
     paddingHorizontal: 20,
+    minHeight: 200,
   },
   emptyText: {
     fontFamily: "outfit",

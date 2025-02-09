@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+} from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
 import { ChatDocument, UserItemInfo } from "@/models/Chats";
 import { useUser } from "@clerk/clerk-expo";
@@ -16,34 +23,103 @@ export const useInbox = () => {
     setDebouncedQuery(text);
   }, 300);
 
-  const GetUserList = async (): Promise<void> => {
+  // Function to listen for changes in the last message of a specific chat
+  const subscribeToLastMessage = (
+    chatId: string,
+    callback: (lastMessage?: { text: string; createdAt: string }) => void
+  ) => {
+    const messagesRef = collection(db, "Chat", chatId, "Messages");
+    const lastMessageQuery = query(
+      messagesRef,
+      orderBy("createdAt", "desc"),
+      limit(1)
+    );
+
+    return onSnapshot(lastMessageQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const messageData = snapshot.docs[0].data();
+        callback({
+          text: messageData.text,
+          createdAt: messageData.createdAt.toDate().toISOString(),
+        });
+      } else {
+        callback(undefined);
+      }
+    });
+  };
+
+  useEffect(() => {
     if (!user?.primaryEmailAddress?.emailAddress) return;
 
     setLoader(true);
-    try {
-      const chatQuery = query(
-        collection(db, "Chat"),
-        where("userIds", "array-contains", user.primaryEmailAddress.emailAddress)
-      );
+    const userEmail = user.primaryEmailAddress.emailAddress;
 
-      const querySnapshot = await getDocs(chatQuery);
-      const newUserList: ChatDocument[] = [];
+    // Query to get all chats the user is part of
+    const chatQuery = query(
+      collection(db, "Chat"),
+      where("userIds", "array-contains", userEmail)
+    );
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as ChatDocument;
-        newUserList.push({
-          ...data,
+    // Listen for changes in the list of chats
+    const unsubscribeChats = onSnapshot(chatQuery, (snapshot) => {
+      const chatsMap = new Map<string, ChatDocument>();
+      const messageSubscriptions: (() => void)[] = [];
+
+      snapshot.docs.forEach((doc) => {
+        const chatData = doc.data() as ChatDocument;
+        chatsMap.set(doc.id, {
+          ...chatData,
           id: doc.id,
+          lastMessage: undefined,
         });
+
+        // Subscribe to the latest message in each chat
+        const unsubscribeMessages = subscribeToLastMessage(
+          doc.id,
+          (lastMessage) => {
+            if (lastMessage) {
+              const updatedChat = chatsMap.get(doc.id);
+              if (updatedChat) {
+                chatsMap.set(doc.id, {
+                  ...updatedChat,
+                  lastMessage,
+                });
+
+                // Update the chat list sorted by the latest message
+                const sortedChats = Array.from(chatsMap.values()).sort(
+                  (a, b) => {
+                    const dateA = a.lastMessage
+                      ? new Date(a.lastMessage.createdAt)
+                      : new Date(0);
+                    const dateB = b.lastMessage
+                      ? new Date(b.lastMessage.createdAt)
+                      : new Date(0);
+                    return dateB.getTime() - dateA.getTime();
+                  }
+                );
+
+                setUserList(sortedChats);
+              }
+            }
+          }
+        );
+
+        messageSubscriptions.push(unsubscribeMessages);
       });
 
-      setUserList(newUserList);
-    } catch (error) {
-      console.error("Error fetching user list:", error);
-    } finally {
       setLoader(false);
-    }
-  };
+
+      // Cleanup function for message subscriptions
+      return () => {
+        messageSubscriptions.forEach((unsubscribe) => unsubscribe());
+      };
+    });
+
+    // Cleanup function for the main subscription
+    return () => {
+      unsubscribeChats();
+    };
+  }, [user?.primaryEmailAddress?.emailAddress]);
 
   const mappedUserList = useMemo(() => {
     if (!user?.primaryEmailAddress?.emailAddress) return [];
@@ -57,13 +133,13 @@ export const useInbox = () => {
         acc.push({
           docId: record.id,
           ...otherUser,
+          lastMessage: record.lastMessage,
         });
       }
 
       return acc;
     }, []);
   }, [user?.primaryEmailAddress?.emailAddress, userList]);
-
 
   const filteredList = useMemo(() => {
     const lowercaseQuery = debouncedQuery.toLowerCase().trim();
@@ -74,19 +150,12 @@ export const useInbox = () => {
     );
   }, [mappedUserList, debouncedQuery]);
 
-  useEffect(() => {
-    if (user) {
-      void GetUserList();
-    }
-  }, [user]);
-
   return {
     loader,
     searchQuery,
     filteredList,
     isEmpty: filteredList.length === 0,
     hasSearchQuery: searchQuery.trim().length > 0,
-    GetUserList,
     handleSearch: (text: string) => {
       setSearchQuery(text);
       debouncedHandleSearch(text);
