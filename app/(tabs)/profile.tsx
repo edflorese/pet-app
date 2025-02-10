@@ -17,7 +17,12 @@ export default function Profile() {
     { id: 1, name: "Add New Pet", icon: "add-circle", path: "/add-new-pet" },
     { id: 2, name: "Favorites", icon: "heart", path: "/(tabs)/favorite" },
     { id: 3, name: "My Post", icon: "bookmark", path: "/user-post" },
-    { id: 4, name: "Inbox", icon: "chatbubble", path: "/(tabs)/inbox" },
+    {
+      id: 4,
+      name: "Nearby Vets",
+      icon: "locate-outline",
+      path: "/nearby-vets",
+    },
     { id: 5, name: "Logout", icon: "exit", path: "/login" },
   ];
 
