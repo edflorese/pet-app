@@ -21,6 +21,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/config/FirebaseConfig";
 import FormSkeleton from "@/components/FormSkeleton";
 import * as ImagePicker from "expo-image-picker";
+import { Camera } from "expo-camera";
 import * as Crypto from "expo-crypto";
 
 export default function PetForm() {
@@ -32,6 +33,7 @@ export default function PetForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState<PetFormData>({
     name: "",
@@ -62,9 +64,11 @@ export default function PetForm() {
   };
 
   useEffect(() => {
-    navigation.setOptions({
-      headerTitle: "Add New Pet",
-    });
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === "granted");
+    })();
+    navigation.setOptions({ headerTitle: "Add New Pet" });
     getCategories();
   }, []);
 
@@ -96,18 +100,21 @@ export default function PetForm() {
     }
   };
 
-  const imagePicker = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  const takePhoto = async () => {
+    if (hasPermission === null || hasPermission === false) {
+      Alert.alert("Camera access is required to take pictures.");
+      return;
+    }
+    let result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
     });
-
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
   };
+  
 
   const uploadImage = async (uri: string) => {
     try {
@@ -203,7 +210,7 @@ export default function PetForm() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Pet for Adoption</Text>
 
-      <Pressable onPress={imagePicker}>
+      <Pressable onPress={takePhoto}>
         {!image ? (
           <Image
             source={require("./../../assets/images/huella.png")}
