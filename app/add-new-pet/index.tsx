@@ -114,7 +114,6 @@ export default function PetForm() {
       setImage(result.assets[0].uri);
     }
   };
-  
 
   const uploadImage = async (uri: string) => {
     try {
