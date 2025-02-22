@@ -1,10 +1,12 @@
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Image, Pressable, Dimensions } from "react-native";
 import React, { useCallback } from "react";
 import Colors from "@/constants/Colors";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import { useOAuth, useAuth } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
+
+const { width } = Dimensions.get("window");
 
 export const useWarmUpBrowser = () => {
   React.useEffect(() => {
@@ -17,7 +19,6 @@ export const useWarmUpBrowser = () => {
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Define an interface for Clerk errors
 interface ClerkError {
   status: number;
   message?: string;
@@ -37,7 +38,6 @@ export default function LoginScreen() {
 
   const onPress = useCallback(async () => {
     try {
-      //ensure we're signed out to prevent session conflicts
       await signOut();
 
       const { createdSessionId, setActive } = await startOAuthFlow({
@@ -52,7 +52,6 @@ export default function LoginScreen() {
       const error = err as ClerkError;
       console.error("Login error:", error);
 
-      // Check if it's a session exists error
       const sessionExistsError = error.errors?.some(
         (e) =>
           e.code === "session_exists" || e.message?.includes("session_exists")
@@ -61,7 +60,6 @@ export default function LoginScreen() {
       if (sessionExistsError) {
         try {
           await signOut();
-          // Retry login after signing out
           const { createdSessionId, setActive } = await startOAuthFlow({
             redirectUrl: Linking.createURL("/(tabs)/home", { scheme: "myapp" }),
           });
@@ -81,64 +79,69 @@ export default function LoginScreen() {
   return (
     <View
       style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
         backgroundColor: Colors.WHITE,
-        height: "100%",
       }}
     >
       <Image
         source={require("./../../assets/images/login.png")}
         style={{
-          width: "100%",
-          height: 500,
+          width: width * 0.9,
+          height: width * 0.9,
+          resizeMode: "cover",
+          marginBottom: 30,
+          borderRadius: 30,
         }}
       />
-      <View
+      <Text
         style={{
-          padding: 20,
-          display: "flex",
-          alignItems: "center",
+          fontFamily: "outfit-bold",
+          fontSize: 28,
+          marginBottom: 10,
+          textAlign: "center",
+        }}
+      >
+        Ready to make a friend?
+      </Text>
+      <Text
+        style={{
+          fontFamily: "outfit",
+          fontSize: 16,
+          textAlign: "center",
+          color: Colors.GRAY,
+          marginBottom: 40,
+        }}
+      >
+        Let's adopt the pet you like and make their life happy again.
+      </Text>
+      <Pressable
+        onPress={onPress}
+        style={{
+          paddingVertical: 16,
+          backgroundColor: Colors.PRIMARY,
+          width: "100%",
+          borderRadius: 12,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 3.84,
+          elevation: 5,
         }}
       >
         <Text
           style={{
-            fontFamily: "outfit-bold",
-            fontSize: 30,
-          }}
-        >
-          Ready to make a friend?
-        </Text>
-        <Text
-          style={{
-            fontFamily: "outfit",
-            fontSize: 18,
+            fontFamily: "outfit-medium",
+            fontSize: 20,
             textAlign: "center",
-            color: Colors.GRAY,
+            color: Colors.WHITE,
           }}
         >
-          Let's adopt the pet which you like and make their life happy again
+          Get started!
         </Text>
-        <Pressable
-          onPress={onPress}
-          style={{
-            padding: 14,
-            marginTop: 100,
-            backgroundColor: Colors.PRIMARY,
-            width: "100%",
-            borderRadius: 14,
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: "outfit-medium",
-              fontSize: 20,
-              textAlign: "center",
-              color: Colors.WHITE,
-            }}
-          >
-            Get started!
-          </Text>
-        </Pressable>
-      </View>
+      </Pressable>
     </View>
   );
 }
