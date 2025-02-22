@@ -47,6 +47,9 @@
         }
       ]
     ],
+    "extra": {
+      "openWeatherApiKey": "4413a65221ef69faffa611c6f0c44f17"
+    },
     "experiments": {
       "typedRoutes": true
     }
