@@ -26,8 +26,14 @@ interface MenuItem {
 export default function Profile() {
   const Menu: MenuItem[] = [
     { id: 1, name: "Add New Pet", icon: "add-circle", path: "/add-new-pet" },
-    { id: 2, name: "Favorites", icon: "heart", path: "/(tabs)/favorite" },
-    { id: 3, name: "My Post", icon: "bookmark", path: "/user-post" },
+    { id: 2, name: "My Post", icon: "bookmark", path: "/user-post" },
+    {
+      id: 3,
+      name: "Time to Walk?",
+      icon: "partly-sunny",
+      path: "/weather-info",
+    },
+
     {
       id: 4,
       name: "Nearby Vets",
