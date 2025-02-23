@@ -22,6 +22,7 @@ export interface PetItem {
 
 export interface PetListItemProps {
   pet: PetItem;
+  onFavoriteChange?: (petId: string, isFavorite: boolean) => void;
 }
 
 export interface PetSubInfoCardProps {
@@ -34,7 +35,7 @@ export interface PetFormData {
   name: string;
   breed: string;
   age: string;
-  sex: 'Male' | 'Female';
+  sex: "Male" | "Female";
   weight: string;
   address: string;
   about: string;
@@ -47,5 +48,5 @@ export interface PetFormProps {
 
 export interface Category {
   name: string;
-  id:string
+  id: string;
 }

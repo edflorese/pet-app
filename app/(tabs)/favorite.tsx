@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -18,43 +18,41 @@ import {
 import { db } from "@/config/FirebaseConfig";
 import Shared from "@/Shared/Shared";
 import PetListItem from "@/components/Home/PetListItem";
+import { PetItem } from "@/models/Pets";
+import Colors from "@/constants/Colors";
 
 export default function Favorite() {
   const { user } = useUser();
-  const [favIds, setFavIds] = useState<string[]>([]);
-  const [favPetList, setFavPetList] = useState<any[]>([]);
+  const [favPetList, setFavPetList] = useState<PetItem[]>([]);
   const [loader, setLoader] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
 
-  // Force load favorites
   useFocusEffect(
     useCallback(() => {
       if (user) fetchFavorites();
     }, [user])
   );
 
-  // Get Id of favorites
   const fetchFavorites = async () => {
     setLoader(true);
     try {
       const result = await Shared.GetFavList(user);
       const favorites = result?.favorites || [];
-      setFavIds(favorites);
-      favorites.length ? fetchPets(favorites) : clearFavorites();
+      favorites.length ? await fetchPets(favorites) : clearFavorites();
     } catch (error) {
       console.error("Error fetching favorites:", error);
+      clearFavorites();
     }
     setLoader(false);
   };
 
-  // Get detail of pets
-  const fetchPets = async (favIds_: string[]) => {
-    if (!favIds_?.length) return clearFavorites();
+  const fetchPets = async (favIds: string[]) => {
+    if (!favIds?.length) return clearFavorites();
 
     try {
       const q = query(
         collection(db, "Pets"),
-        where(documentId(), "in", favIds_)
+        where(documentId(), "in", favIds)
       );
       const querySnapshot = await getDocs(q);
 
@@ -62,7 +60,7 @@ export default function Favorite() {
         const pets = querySnapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
-        }));
+        })) as PetItem[];
         setFavPetList(pets);
         setIsEmpty(false);
       } else {
@@ -70,6 +68,7 @@ export default function Favorite() {
       }
     } catch (error) {
       console.error("Error fetching pets:", error);
+      clearFavorites();
     }
   };
 
@@ -78,11 +77,35 @@ export default function Favorite() {
     setIsEmpty(true);
   };
 
+  const handleFavoriteChange = async (petId: string, isFavorite: boolean) => {
+    if (!isFavorite) {
+      setFavPetList((current) => current.filter((pet) => pet.id !== petId));
+      if (favPetList.length <= 1) setIsEmpty(true);
+    } else {
+      try {
+        const petQuery = await getDocs(
+          query(collection(db, "Pets"), where(documentId(), "==", petId))
+        );
+        if (!petQuery.empty) {
+          const petData = petQuery.docs[0].data() as PetItem;
+          setFavPetList((current) => [...current, { ...petData, id: petId }]);
+          setIsEmpty(false);
+        }
+      } catch (error) {
+        console.error("Error fetching pet:", error);
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Favorites</Text>
       {loader && (
-        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
+        <ActivityIndicator
+          size="large"
+          color={Colors.PRIMARY}
+          style={styles.loader}
+        />
       )}
       {!loader && isEmpty && (
         <Text style={styles.emptyMessage}>
@@ -96,7 +119,10 @@ export default function Favorite() {
           numColumns={2}
           onRefresh={fetchFavorites}
           refreshing={loader}
-          renderItem={({ item }) => <PetListItem pet={item} />}
+          renderItem={({ item }) => (
+            <PetListItem pet={item} onFavoriteChange={handleFavoriteChange} />
+          )}
+          contentContainerStyle={styles.listContainer}
         />
       )}
     </View>
@@ -121,5 +147,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 20,
+  },
+  listContainer: {
+    gap: 15,
+    paddingVertical: 10,
   },
 });
