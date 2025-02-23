@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { PetListItemProps } from "@/models/Pets";
 import MarkFav from "../MarkFav";
 
-export default function PetListItem({ pet }: PetListItemProps) {
+export default function PetListItem({ pet, onFavoriteChange }: PetListItemProps) {
   const router = useRouter();
 
   return (
@@ -24,7 +24,7 @@ export default function PetListItem({ pet }: PetListItemProps) {
         resizeMode="cover"
       />
       <View style={styles.fav}>
-        <MarkFav pet={pet} color = {'white'}/>
+        <MarkFav pet={pet} color={'white'} onFavoriteChange={onFavoriteChange} />
       </View>
       <Text style={styles.name}>{pet.name}</Text>
       <View style={styles.detailContainer}>

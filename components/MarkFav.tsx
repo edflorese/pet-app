@@ -1,49 +1,74 @@
+// components/MarkFav.tsx
 import { View, Pressable } from "react-native";
 import React, { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Shared from "@/Shared/Shared";
 import { useUser } from "@clerk/clerk-expo";
-import { PetListItemProps } from "@/models/Pets";
+import { PetItem } from "@/models/Pets";
 
-interface MarkFavColor extends PetListItemProps {
+interface MarkFavProps {
+  pet: PetItem;
   color?: string;
+  onFavoriteChange?: (petId: string, isFavorite: boolean) => void;
 }
 
-export default function MarkFav({ pet, color = "black" }: MarkFavColor) {
+export default function MarkFav({ 
+  pet, 
+  color = "black",
+  onFavoriteChange 
+}: MarkFavProps) {
   const { user } = useUser();
-  const [favList, setFavList] = useState<string[]>([]);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    user && GetFav();
+    user && initializeFavState();
   }, [user]);
 
-  const GetFav = async () => {
+  const initializeFavState = async () => {
     const result = await Shared.GetFavList(user);
-    setFavList(result?.favorites ? result.favorites : []);
-  };
-  const AddToFav = async () => {
-    const favResult = favList;
-    favResult.push(pet.id);
-    await Shared.UpdateFav(user, favResult);
-    GetFav();
+    setIsFavorite(result?.favorites?.includes(pet.id) ?? false);
   };
 
-  const removeFromFav = async () => {
-    const favResult = favList.filter((item) => item != pet.id);
-    await Shared.UpdateFav(user, favResult);
-    GetFav();
+  const toggleFavorite = async () => {
+    if (!user || isUpdating) return;
+
+    setIsUpdating(true);
+    const newFavoriteState = !isFavorite;
+    
+    setIsFavorite(newFavoriteState);
+    onFavoriteChange?.(pet.id, newFavoriteState);
+
+    try {
+      const result = await Shared.GetFavList(user);
+      const currentFavs = result?.favorites || [];
+      
+      const newFavs = newFavoriteState
+        ? [...currentFavs, pet.id]
+        : currentFavs.filter(id => id !== pet.id);
+
+      await Shared.UpdateFav(user, newFavs);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      setIsFavorite(!newFavoriteState);
+      onFavoriteChange?.(pet.id, !newFavoriteState);
+    } finally {
+      setIsUpdating(false);
+    }
   };
+
   return (
     <View>
-      {favList?.includes(pet.id) ? (
-        <Pressable onPress={removeFromFav}>
-          <Ionicons name="heart" size={30} color="red" />
-        </Pressable>
-      ) : (
-        <Pressable onPress={() => AddToFav()}>
-          <Ionicons name="heart-outline" size={30} color={color} />
-        </Pressable>
-      )}
+      <Pressable 
+        onPress={toggleFavorite}
+        disabled={isUpdating}
+      >
+        <Ionicons
+          name={isFavorite ? "heart" : "heart-outline"}
+          size={30}
+          color={isFavorite ? "red" : color}
+        />
+      </Pressable>
     </View>
   );
 }
