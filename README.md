@@ -8,7 +8,7 @@ This application is developed with React Native and Expo to facilitate pet adopt
 
 Ensure you have the following installed:
 
-- **Node.js** (versión 14 o superior): [Descargar Node.js](https://nodejs.org/)
+- **Node.js**
 
 ## Cloning the Repository
 Clone the repository from GitHub:
