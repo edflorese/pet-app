@@ -1,4 +1,3 @@
-// components/MarkFav.tsx
 import { View, Pressable } from "react-native";
 import React, { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";

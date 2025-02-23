@@ -21,7 +21,7 @@ export default function PetInfo({ pet }: PetInfoProps) {
 
   const refreshImageUrl = async () => {
     try {
-      // Extract the file path from the URL
+      
       const pathStartIndex = pet.imageUrl.indexOf("/o/PetAdopt/");
       if (pathStartIndex === -1) throw new Error("Invalid image path");
 
@@ -29,7 +29,7 @@ export default function PetInfo({ pet }: PetInfoProps) {
       const filePath = pet.imageUrl.substring(pathStartIndex + 3, pathEndIndex);
       const decodedPath = decodeURIComponent(filePath);
 
-      // Get a fresh URL
+     
       const imageRef = ref(storage, decodedPath);
       const freshUrl = await getDownloadURL(imageRef);
       setImageUrl(freshUrl);

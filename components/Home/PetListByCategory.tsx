@@ -12,7 +12,6 @@ export default function PetListByCategory() {
   const [loader, setLoader] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("Dogs");
 
-  // 🚀 Recarga solo PetListByCategory al volver a Home
   useFocusEffect(
     useCallback(() => {
       GetPetList(selectedCategory);

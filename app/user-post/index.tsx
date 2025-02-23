@@ -83,10 +83,7 @@ export default function UserPost() {
     }
   };
 
-  const handleFavoriteChange = (petId: string, isFavorite: boolean) => {
-    // No necesitamos hacer nada especial aquí ya que los posts del usuario
-    // no dependen del estado de favoritos
-  };
+  const handleFavoriteChange = (petId: string, isFavorite: boolean) => {};
 
   return (
     <View style={styles.container}>

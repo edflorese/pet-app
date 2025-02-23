@@ -15,12 +15,10 @@ export default function UserItem({ userInfo }: UserItemProps) {
     const messageDate = new Date(timestamp);
     const now = new Date();
 
-    // Reset hours to compare only the date
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Format time in 24-hour format
     const getTimeStr = (date: Date) => {
       return date.toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -28,7 +26,6 @@ export default function UserItem({ userInfo }: UserItemProps) {
       });
     };
 
-    // Format full date
     const getDateStr = (date: Date) => {
       return date.toLocaleDateString("es-ES", {
         day: "2-digit",
@@ -37,29 +34,24 @@ export default function UserItem({ userInfo }: UserItemProps) {
       });
     };
 
-    // Get the day of the week
     const getDayName = (date: Date) => {
       return date.toLocaleDateString("es-ES", { weekday: "long" });
     };
 
-    // If the message is from today
     if (messageDate >= today) {
       return getTimeStr(messageDate);
     }
 
-    // If the message is from yesterday
     if (messageDate >= yesterday) {
       return "Yesterday";
     }
 
-    // If the message is from this week (last 7 days)
     const oneWeekAgo = new Date(today);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
     if (messageDate >= oneWeekAgo) {
       return getDayName(messageDate);
     }
 
-    // If the message is older
     return getDateStr(messageDate);
   };
 
