@@ -23,6 +23,10 @@ import FormSkeleton from "@/components/FormSkeleton";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import * as Crypto from "expo-crypto";
+import {
+  requestNotificationPermissions,
+  showSuccessNotification,
+} from "@/services/NotificationService";
 
 export default function PetForm() {
   const [image, setImage] = useState<string | undefined>(undefined);
@@ -67,6 +71,7 @@ export default function PetForm() {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === "granted");
+      await requestNotificationPermissions();
     })();
     navigation.setOptions({ headerTitle: "Add New Pet" });
     getCategories();
@@ -180,7 +185,7 @@ export default function PetForm() {
         },
       });
 
-      Alert.alert("Success", "Pet information saved successfully!");
+      await showSuccessNotification(formData.name);
       navigation.goBack();
     } catch (error) {
       console.error("Error saving pet:", error);
