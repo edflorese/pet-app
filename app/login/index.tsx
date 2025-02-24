@@ -1,12 +1,17 @@
-import { View, Text, Image, Pressable, Dimensions, StyleSheet, ViewStyle, TextStyle } from "react-native";
-import React, { useCallback } from "react";
-import Colors from "@/constants/Colors";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  Dimensions,
+  StyleSheet,
+} from "react-native";
+import React, { useCallback, useState } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import { useOAuth, useAuth } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
-
-const { width } = Dimensions.get("window");
+import { Fontisto } from "@expo/vector-icons";
 
 export const useWarmUpBrowser = () => {
   React.useEffect(() => {
@@ -33,23 +38,53 @@ interface ClerkError {
 export default function LoginScreen() {
   useWarmUpBrowser();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, isSignedIn, getToken } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: "oauth_google" });
-  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: "oauth_facebook" });
+  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({
+    strategy: "oauth_google",
+  });
+  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({
+    strategy: "oauth_facebook",
+  });
 
-  // Función auxiliar para manejar el flujo de OAuth
+  const verifySession = async () => {
+    try {
+      const token = await getToken();
+      return !!token;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleOAuthLogin = useCallback(
     async (startOAuthFlow: typeof startGoogleOAuthFlow) => {
+      if (isLoading) return;
+      setIsLoading(true);
+
       try {
-        await signOut();
+        if (isSignedIn) {
+          await signOut();
+        }
+
         const { createdSessionId, setActive } = await startOAuthFlow({
           redirectUrl: Linking.createURL("/(tabs)/home", { scheme: "myapp" }),
         });
 
         if (createdSessionId && setActive) {
           await setActive({ session: createdSessionId });
-          router.push("/(tabs)/home");
+
+          const isSessionValid = await verifySession();
+
+          if (isSessionValid) {
+            router.replace("/(tabs)/home");
+          } else {
+            alert("Failed to sign in. Please try again.");
+            router.replace("/");
+          }
+        } else {
+          alert("Failed to sign in. Please try again.");
+          router.replace("/");
         }
       } catch (err) {
         const error = err as ClerkError;
@@ -64,21 +99,37 @@ export default function LoginScreen() {
           try {
             await signOut();
             const { createdSessionId, setActive } = await startOAuthFlow({
-              redirectUrl: Linking.createURL("/(tabs)/home", { scheme: "myapp" }),
+              redirectUrl: Linking.createURL("/(tabs)/home", {
+                scheme: "myapp",
+              }),
             });
 
             if (createdSessionId && setActive) {
               await setActive({ session: createdSessionId });
-              router.push("/(tabs)/home");
+
+              const isSessionValid = await verifySession();
+
+              if (isSessionValid) {
+                router.replace("/(tabs)/home");
+              } else {
+                alert("Failed to sign in. Please try again.");
+                router.replace("/");
+              }
             }
           } catch (retryErr) {
-            const retryError = retryErr as ClerkError;
-            console.error("Retry login error:", retryError);
+            console.error("Retry login error:", retryErr);
+            alert("Failed to sign in. Please try again.");
+            router.replace("/");
           }
+        } else {
+          alert("An error occurred during sign in. Please try again.");
+          router.replace("/");
         }
+      } finally {
+        setIsLoading(false);
       }
     },
-    [router, signOut]
+    [router, signOut, isSignedIn, isLoading]
   );
 
   const onPressGoogle = useCallback(async () => {
@@ -92,7 +143,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require("./../../assets/images/login.png")}
+        source={require("../../assets/images/login.png")}
         style={styles.image}
       />
       <Text style={styles.title}>Ready to make a friend?</Text>
@@ -100,15 +151,19 @@ export default function LoginScreen() {
         Let's adopt the pet you like and make their life happy again.
       </Text>
 
-      {/* Botón para login con Google */}
-      <Pressable onPress={onPressGoogle} style={styles.googleButton}>
-        <Text style={styles.buttonText}>Sign in with Google</Text>
-      </Pressable>
+      <View style={styles.buttonsContainer}>
+        <Pressable style={styles.googleButton} onPress={onPressGoogle}>
+          <Fontisto name="google" size={20} color="#EA4335" />
+          <Text style={styles.buttonText}>Continue with Google</Text>
+        </Pressable>
 
-      {/* Botón para login con Facebook */}
-      <Pressable onPress={onPressFacebook} style={styles.facebookButton}>
-        <Text style={styles.buttonText}>Sign in with Facebook</Text>
-      </Pressable>
+        <Pressable style={styles.facebookButton} onPress={onPressFacebook}>
+          <Fontisto name="facebook" size={20} color="white" />
+          <Text style={[styles.buttonText, styles.facebookText]}>
+            Continue with Facebook
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -116,58 +171,55 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
-    backgroundColor: Colors.WHITE,
+    backgroundColor: "white",
   },
   image: {
-    width: width * 0.9,
-    height: width * 0.9,
-    resizeMode: "cover",
-    marginBottom: 30,
-    borderRadius: 30,
+    width: "80%",
+    height: 300,
+    alignSelf: "center",
+    resizeMode: "contain",
   },
   title: {
-    fontFamily: "outfit-bold",
-    fontSize: 28,
-    marginBottom: 10,
+    fontSize: 32,
+    fontWeight: "bold",
     textAlign: "center",
+    marginTop: 30,
   },
   description: {
-    fontFamily: "outfit",
     fontSize: 16,
     textAlign: "center",
-    color: Colors.GRAY,
-    marginBottom: 40,
+    color: "#666",
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  buttonsContainer: {
+    gap: 15,
   },
   googleButton: {
-    paddingVertical: 16,
-    backgroundColor: "#4285F4", // Color característico de Google
-    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "white",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3.84,
-    elevation: 5,
-    marginBottom: 16,
-  } as ViewStyle,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    gap: 12,
+  },
   facebookButton: {
-    paddingVertical: 16,
-    backgroundColor: "#1877F2", // Color característico de Facebook
-    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#1877F2",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3.84,
-    elevation: 5,
-  } as ViewStyle,
+    gap: 12,
+  },
   buttonText: {
-    fontFamily: "outfit-medium",
-    fontSize: 20,
-    textAlign: "center",
-    color: Colors.WHITE,
-  } as TextStyle,
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+  },
+  facebookText: {
+    color: "white",
+  },
 });
